@@ -78,7 +78,7 @@ class _CadastroState extends State<Cadastro> {
                         });
                       },
                     ),
-                    Text("Passageiro"),
+                    Text("Motorista"),
                   ],
                 ),),
                 Padding(

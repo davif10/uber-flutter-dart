@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:uber/telas/Cadastro.dart';
 
 class Home extends StatefulWidget {
   @override
@@ -81,9 +80,7 @@ class _HomeState extends State<Home> {
                 ),
                 Center(
                   child: TextButton(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context)=> Cadastro()));
-                    },
+                    onPressed: () => Navigator.pushNamed(context, "/cadastro"),
                     child: Text(
                       "Não tem conta? Cadastre-se!",
                       style: TextStyle(color: Colors.white),
