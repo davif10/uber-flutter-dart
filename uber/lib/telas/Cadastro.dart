@@ -64,7 +64,9 @@ class _CadastroState extends State<Cadastro> {
           Navigator.pushNamedAndRemoveUntil(context, "/painel-passageiro", (_) => false);
           break;
       }
-    });
+    }).catchError((error){
+      _mensagemErro = "Erro ao cadastrar usuário, verifique os campos e tente novamente!";
+    });;
   }
 
   @override
