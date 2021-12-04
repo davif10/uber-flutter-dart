@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ class _HomeState extends State<Home> {
   TextEditingController _controllerEmail = TextEditingController();
   TextEditingController _controllerSenha = TextEditingController();
   String _mensagemErro = "";
+  bool _carregando = false;
 
   _validarCampos(){
     String email = _controllerEmail.text;
@@ -35,14 +37,55 @@ class _HomeState extends State<Home> {
     }
   }
   _logarUsuario(Usuario usuario){
+    setState(() {
+      _carregando = true;
+    });
     FirebaseAuth auth = FirebaseAuth.instance;
 
     auth.signInWithEmailAndPassword(email: usuario.email, password: usuario.senha)
       .then((firebaseUser) {
-      Navigator.pushReplacementNamed(context, "/painel-passageiro");
+      _redirecionaTipoUsuario(firebaseUser.user.uid);
     }).catchError((error){
         _mensagemErro = "Erro ao autenticar usuário, verifique e-mail e senha e tente novamente!";
     });
+  }
+
+  _redirecionaTipoUsuario(String idUsuario) async{
+    Firestore db = Firestore.instance;
+    DocumentSnapshot snapshot = await
+    db.collection("usuarios")
+    .document(idUsuario)
+    .get();
+    Map<String, dynamic> dados = snapshot.data;
+    String tipoUsuario = dados["tipoUsuario"];
+
+    setState(() {
+      _carregando = false;
+    });
+
+    switch(tipoUsuario){
+      case "motorista":
+        Navigator.pushReplacementNamed(context, "painel-motorista");
+        break;
+      case "passageiro":
+        Navigator.pushReplacementNamed(context, "painel-passageiro");
+        break;
+    }
+  }
+
+  _verificaUsuarioLogado() async{
+    FirebaseAuth auth = FirebaseAuth.instance;
+    FirebaseUser usuarioLogado = await auth.currentUser();
+    if(usuarioLogado != null){
+      String idUsuario = usuarioLogado.uid;
+      _redirecionaTipoUsuario(idUsuario);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _verificaUsuarioLogado();
   }
 
   @override
@@ -100,7 +143,9 @@ class _HomeState extends State<Home> {
                 Padding(
                   padding: EdgeInsets.only(top: 16, bottom: 10),
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      _validarCampos();
+                    },
                     child: Text(
                       "Entrar",
                       style: TextStyle(
@@ -122,6 +167,12 @@ class _HomeState extends State<Home> {
                     ),
                   ),
                 ),
+                _carregando
+                ? Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Center(child: CircularProgressIndicator(backgroundColor: Colors.white,),),
+                )
+                : Container(),
                 Padding(
                   padding: EdgeInsets.only(top: 16),
                   child: Center(child: Text(_mensagemErro, style: TextStyle(color: Colors.red, fontSize: 20),)),
