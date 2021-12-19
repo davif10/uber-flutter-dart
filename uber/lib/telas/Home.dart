@@ -65,10 +65,10 @@ class _HomeState extends State<Home> {
 
     switch(tipoUsuario){
       case "motorista":
-        Navigator.pushReplacementNamed(context, "painel-motorista");
+        Navigator.pushReplacementNamed(context, "/painel-motorista");
         break;
       case "passageiro":
-        Navigator.pushReplacementNamed(context, "painel-passageiro");
+        Navigator.pushReplacementNamed(context, "/painel-passageiro");
         break;
     }
   }

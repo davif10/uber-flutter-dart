@@ -9,7 +9,7 @@ final ThemeData temaPadrao= ThemeData(
 void main() {
   runApp(MaterialApp(
     title: "Uber",
-    home: Home(),
+    //home: Home(),
     theme: temaPadrao,
     initialRoute: "/",
     onGenerateRoute: Rotas.gerarRotas,
