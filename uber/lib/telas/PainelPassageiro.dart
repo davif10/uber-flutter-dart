@@ -25,6 +25,8 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
 
   );
 
+  Set<Marker> _marcadores ={};
+
   _escolhaMenuItem(String escolha){
     switch(escolha){
       case "Deslogar":
@@ -52,6 +54,7 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
       distanceFilter: 10
     );
     geolocator.getPositionStream(locationOptions).listen((position) {
+      _exibirMarcadorPassageiro(position);
       _posicaoCamera = CameraPosition(
           target: LatLng(position.latitude, position.longitude),
           zoom: 19
@@ -66,6 +69,7 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
 
     setState(() {
       if(position != null){
+        _exibirMarcadorPassageiro(position);
         _posicaoCamera = CameraPosition(
             target: LatLng(position.latitude, position.longitude),
             zoom: 19
@@ -78,6 +82,29 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
   _movimentarCamera(CameraPosition cameraPosition) async{
     GoogleMapController googleMapController = await _controller.future;
     googleMapController.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+  }
+  
+  _exibirMarcadorPassageiro( Position local) async{
+    double pixelRatio = MediaQuery.of(context).devicePixelRatio;
+    BitmapDescriptor.fromAssetImage(
+        ImageConfiguration(devicePixelRatio: pixelRatio),
+        "imagens/passageiro.png").then((icone){
+
+      Marker marcadorPassageiro = Marker(
+          markerId: MarkerId("marcador-passageiro"),
+          position: LatLng(local.latitude, local.longitude),
+          infoWindow: InfoWindow(
+              title: "Meu local"
+          ),
+          icon: icone
+      );
+      
+      setState(() {
+        _marcadores.add(marcadorPassageiro);
+      });
+    });
+
+
   }
 
   @override
@@ -114,8 +141,9 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
               mapType: MapType.normal,
               initialCameraPosition: _posicaoCamera,
               onMapCreated: _onMapCreated,
-              myLocationEnabled: true,
+              //myLocationEnabled: true,
               myLocationButtonEnabled: false,
+              markers: _marcadores,
             ),
             Positioned(
                 child: Padding(
