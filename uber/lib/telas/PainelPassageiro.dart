@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:uber/model/Destino.dart';
 
 class PainelPassageiro extends StatefulWidget {
 
@@ -15,6 +16,7 @@ class PainelPassageiro extends StatefulWidget {
 }
 
 class _PainelPassageiroState extends State<PainelPassageiro> {
+  TextEditingController _controllerDestino = TextEditingController(text:"Av Paulista, 342");
   List<String> itensMenu = [
     "Configurações", "Deslogar"
   ];
@@ -104,7 +106,52 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
       });
     });
 
+  }
 
+  _chamarUber() async{
+    String enderecoDestino = _controllerDestino.text;
+    if(enderecoDestino.isNotEmpty){
+      List<Placemark> listaEnderecos = await Geolocator()
+          .placemarkFromAddress(enderecoDestino);
+      if(listaEnderecos != null && listaEnderecos.length > 0){
+        Placemark endereco = listaEnderecos[0];
+        Destino destino = Destino();
+        destino.cidade = endereco.administrativeArea;
+        destino.cep = endereco.postalCode;
+        destino.bairro = endereco.subLocality;
+        destino.rua = endereco.thoroughfare;
+        destino.numero = endereco.subThoroughfare;
+        destino.latitude = endereco.position.latitude;
+        destino.longitude = endereco.position.longitude;
+
+        String enderecoConfirmacao;
+        enderecoConfirmacao = "\n Cidade: "+ destino.cidade;
+        enderecoConfirmacao+= "\n Rua: "+ destino.rua + ", "+destino.numero;
+        enderecoConfirmacao+= "\n Bairro: "+ destino.bairro;
+        enderecoConfirmacao+= "\n Cep: "+ destino.cep;
+        
+        showDialog(
+            context: context,
+            builder: (context){
+              return AlertDialog(
+                title: Text("Confirmação do endereço"),
+                content:  Text(enderecoConfirmacao),
+                contentPadding: EdgeInsets.all(16),
+                actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text("Cancelar", style: TextStyle(color: Colors.red),)),
+                    TextButton(
+                      onPressed: () {
+                        // _salvarRequisicao();
+                        Navigator.pop(context);
+                      },
+                      child: Text("Confirmar", style: TextStyle(color: Colors.red),)),
+                ],
+              );
+            });
+      }
+    }
   }
 
   @override
@@ -186,6 +233,7 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
                         color: Colors.white
                     ),
                     child: TextField(
+                      controller: _controllerDestino,
                       decoration: InputDecoration(
                           icon: Container(
                             margin: EdgeInsets.only(left: 20),
@@ -211,7 +259,7 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
                   : EdgeInsets.all(10),
                   child: ElevatedButton(
                     onPressed: () {
-
+                        _chamarUber();
                     },
                     child: Text(
                       "Chamar Uber",
