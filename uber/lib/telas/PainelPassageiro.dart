@@ -173,9 +173,19 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
 
     Firestore db = Firestore.instance;
     db.collection("requisicoes")
-    .add(requisicao.toMap());
+    .document(requisicao.id)
+    .setData(requisicao.toMap());
 
-    _statusAguardando();
+    //Salvar requisição ativa
+    Map<String,dynamic> dadosRequisicaoAtiva = {};
+    dadosRequisicaoAtiva["id_requisicao"] = requisicao.id;
+    dadosRequisicaoAtiva["id_usuario"] = passageiro.idUsuario;
+    dadosRequisicaoAtiva["status"] = StatusRequisicao.AGUARDANDO;
+
+    db.collection("requisicao_ativa")
+    .document(passageiro.idUsuario)
+    .setData(dadosRequisicaoAtiva);
+
   }
 
   _alterarBotaoPrincipal(String texto, Color cor, Function funcao){
@@ -200,12 +210,42 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
 
   }
 
+  _adicionarListenerRequisicaoAtiva() async{
+    FirebaseUser firebaseUser = await UsuarioFirebase.getUsuarioAtual();
+    Firestore db = Firestore.instance;
+    await db.collection("requisicao_ativa")
+    .document(firebaseUser.uid)
+    .snapshots()
+    .listen((snapshot) {
+
+        if(snapshot.data != null){
+          Map<String, dynamic> dados = snapshot.data;
+          String status = dados["status"];
+          String idRequisicao = dados["id_requisicao"];
+
+          switch(status){
+            case StatusRequisicao.AGUARDANDO:
+              _statusAguardando();
+              break;
+            case StatusRequisicao.A_CAMINHO:
+              break;
+            case StatusRequisicao.VIAGEM:
+              break;
+            case StatusRequisicao.FINALIZADA:
+              break;
+          }
+        }else{
+          _statusUberNaoChamado();
+        }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _recuperarUltimaLocalizacaoConhecida();
     _adicionarListenerLocalizacao();
-    _statusUberNaoChamado();
+    _adicionarListenerRequisicaoAtiva();
   }
 
   @override
@@ -244,6 +284,9 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
                 child: Stack(
                   children: [
                     Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
                         child: Padding(
                           padding: EdgeInsets.all(10),
                           child: Container(
@@ -271,35 +314,37 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
                           ),
                         )
                     ),
-                    // Positioned(
-                    //     top: 55,
-                    //     child: Padding(
-                    //       padding: EdgeInsets.all(10),
-                    //       child: Container(
-                    //         height: 50,
-                    //         width: double.infinity,
-                    //         decoration: BoxDecoration(
-                    //             border: Border.all(color: Colors.grey),
-                    //             borderRadius: BorderRadius.circular(3),
-                    //             color: Colors.white
-                    //         ),
-                    //         child: TextField(
-                    //           controller: _controllerDestino,
-                    //           decoration: InputDecoration(
-                    //               icon: Container(
-                    //                 margin: EdgeInsets.only(left: 20),
-                    //                 width: 10,
-                    //                 height: 10,
-                    //                 child: Icon(Icons.local_taxi, color: Colors.black,),
-                    //               ),
-                    //               hintText: "Digite o destino",
-                    //               border: InputBorder.none,
-                    //               contentPadding: EdgeInsets.only(left: 15, top: 16)
-                    //           ),
-                    //         ),
-                    //       ),
-                    //     )
-                    // ),
+                    Positioned(
+                        top: 55,
+                        left: 0,
+                        right: 0,
+                        child: Padding(
+                          padding: EdgeInsets.all(10),
+                          child: Container(
+                            height: 50,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey),
+                                borderRadius: BorderRadius.circular(3),
+                                color: Colors.white
+                            ),
+                            child: TextField(
+                              controller: _controllerDestino,
+                              decoration: InputDecoration(
+                                  icon: Container(
+                                    margin: EdgeInsets.only(left: 20),
+                                    width: 10,
+                                    height: 10,
+                                    child: Icon(Icons.local_taxi, color: Colors.black,),
+                                  ),
+                                  hintText: "Digite o destino",
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.only(left: 15, top: 16)
+                              ),
+                            ),
+                          ),
+                        )
+                    ),
                   ],
                 )
             ),
