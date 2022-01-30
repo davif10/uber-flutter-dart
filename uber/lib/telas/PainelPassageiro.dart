@@ -38,6 +38,7 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
   String _textoBotao = "Chamar uber";
   Color _corBotao = Color(0xff1ebbd8);
   Function _funcaoBotao;
+  String _idRequisicao;
 
   _escolhaMenuItem(String escolha){
     switch(escolha){
@@ -206,7 +207,17 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
     _alterarBotaoPrincipal("Cancelar", Colors.red, () => _cancelarUber());
   }
 
-  _cancelarUber(){
+  _cancelarUber() async{
+    FirebaseUser firebaseUser = await UsuarioFirebase.getUsuarioAtual();
+    Firestore db = Firestore.instance;
+    db.collection("requisicoes")
+    .document(_idRequisicao).updateData({
+      "status": StatusRequisicao.CANCELADA
+    }).then((_){
+      db.collection("requisicao_ativa")
+          .document(firebaseUser.uid)
+          .delete();
+    });
 
   }
 
@@ -221,7 +232,7 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
         if(snapshot.data != null){
           Map<String, dynamic> dados = snapshot.data;
           String status = dados["status"];
-          String idRequisicao = dados["id_requisicao"];
+          _idRequisicao = dados["id_requisicao"];
 
           switch(status){
             case StatusRequisicao.AGUARDANDO:
