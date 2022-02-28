@@ -4,6 +4,8 @@ class Usuario{
   String _email;
   String _senha;
   String _tipoUsuario;
+  double _latitude;
+  double _longitude;
 
   Usuario();
 
@@ -15,9 +17,18 @@ class Usuario{
     Map<String,dynamic> map ={
       "nome": this.nome,
       "email": this.email,
-      "tipoUsuario": this.tipoUsuario
+      "tipoUsuario": this.tipoUsuario,
+      "latitude": this.latitude,
+      "longitude": this.longitude
     };
     return map;
+  }
+
+
+  double get latitude => _latitude;
+
+  set latitude(double value) {
+    _latitude = value;
   }
 
   String get tipoUsuario => _tipoUsuario;
@@ -48,5 +59,11 @@ class Usuario{
 
   set idUsuario(String value) {
     _idUsuario = value;
+  }
+
+  double get longitude => _longitude;
+
+  set longitude(double value) {
+    _longitude = value;
   }
 }
