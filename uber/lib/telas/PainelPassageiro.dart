@@ -207,6 +207,12 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
     _alterarBotaoPrincipal("Cancelar", Colors.red, () => _cancelarUber());
   }
 
+  _statusACaminho(){
+    _alterarBotaoPrincipal("Motorista a caminho", Colors.grey, (){
+
+    });
+  }
+
   _cancelarUber() async{
     FirebaseUser firebaseUser = await UsuarioFirebase.getUsuarioAtual();
     Firestore db = Firestore.instance;
@@ -239,6 +245,7 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
               _statusAguardando();
               break;
             case StatusRequisicao.A_CAMINHO:
+              _statusACaminho();
               break;
             case StatusRequisicao.VIAGEM:
               break;

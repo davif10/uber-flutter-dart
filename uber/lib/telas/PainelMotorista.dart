@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:uber/util/StatusRequisicao.dart';
+import 'package:uber/util/UsuarioFirebase.dart';
 class PainelMotorista extends StatefulWidget {
 
   @override
@@ -43,11 +44,28 @@ class _PainelMotoristaState extends State<PainelMotorista> {
     });
   }
 
+  _recuperaRequisicaoAtivaMotorista() async{
+    //Recupera dados do usuario logado
+    FirebaseUser firebaseUser = await UsuarioFirebase.getUsuarioAtual();
+
+    DocumentSnapshot documentSnapshot = await db
+        .collection("requisicao_ativa_motorista")
+    .document(firebaseUser.uid).get();
+
+    var dadosRequisicao = documentSnapshot.data;
+    if(dadosRequisicao == null){
+      _adicionarListenerRequisicoes();
+    }else{
+      String idRequisicao = dadosRequisicao["id_requisicao"];
+      Navigator.pushReplacementNamed(context, "/corrida", arguments: idRequisicao);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
 
-    _adicionarListenerRequisicoes();
+    _recuperaRequisicaoAtivaMotorista();
   }
 
   @override
