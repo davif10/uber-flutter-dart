@@ -22,7 +22,7 @@ class _CorridaState extends State<Corrida> {
   Completer<GoogleMapController> _controller = Completer();
   Set<Marker> _marcadores ={};
   Map<String, dynamic> _dadosRequisicao;
-  Position _localMotorista;
+  String _mensagemStatus;
 
   CameraPosition _posicaoCamera = CameraPosition(
     target: LatLng(-23.563999, -46.653256),
@@ -51,16 +51,11 @@ class _CorridaState extends State<Corrida> {
         distanceFilter: 10
     );
     geolocator.getPositionStream(locationOptions).listen((position) {
-      _exibirMarcadorPassageiro(position);
-      _posicaoCamera = CameraPosition(
-          target: LatLng(position.latitude, position.longitude),
-          zoom: 19
-      );
-      //_movimentarCamera(_posicaoCamera);
 
-      setState(() {
-        _localMotorista = position;
-      });
+      if(position != null){
+
+      }
+
     });
   }
 
@@ -68,17 +63,9 @@ class _CorridaState extends State<Corrida> {
     Position position = await Geolocator()
         .getLastKnownPosition(desiredAccuracy: LocationAccuracy.high);
 
-    setState(() {
-      if(position != null){
-        _exibirMarcadorPassageiro(position);
-        _posicaoCamera = CameraPosition(
-            target: LatLng(position.latitude, position.longitude),
-            zoom: 19
-        );
-        //_movimentarCamera(_posicaoCamera);
-        _localMotorista = position;
-      }
-    });
+    if(position != null){
+      //Atualizar a localização em tempo real
+    }
   }
 
   _movimentarCamera(CameraPosition cameraPosition) async{
@@ -86,23 +73,23 @@ class _CorridaState extends State<Corrida> {
     googleMapController.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
   }
 
-  _exibirMarcadorPassageiro( Position local) async{
+  _exibirMarcador( Position local, String icone, String infoWindow) async{
     double pixelRatio = MediaQuery.of(context).devicePixelRatio;
     BitmapDescriptor.fromAssetImage(
         ImageConfiguration(devicePixelRatio: pixelRatio),
-        "imagens/motorista.png").then((icone){
+        icone).then((bitmapDescriptor){
 
-      Marker marcadorPassageiro = Marker(
-          markerId: MarkerId("marcador-motorista"),
+      Marker marcador = Marker(
+          markerId: MarkerId(icone),
           position: LatLng(local.latitude, local.longitude),
           infoWindow: InfoWindow(
-              title: "Meu local"
+              title: infoWindow
           ),
-          icon: icone
+          icon: bitmapDescriptor
       );
 
       setState(() {
-        _marcadores.add(marcadorPassageiro);
+        _marcadores.add(marcador);
       });
     });
 
@@ -115,7 +102,7 @@ class _CorridaState extends State<Corrida> {
     .document(idRequisicao)
     .get();
     _dadosRequisicao = documentSnapshot.data;
-    _adicionarListenerRequisicao();
+
   }
 
   _adicionarListenerRequisicao() async{
@@ -124,6 +111,8 @@ class _CorridaState extends State<Corrida> {
     await db.collection("requisicoes")
     .document(idRequisicao).snapshots().listen((event) {
       if(event.data != null){
+        _dadosRequisicao = event.data;
+
         Map<String, dynamic> dados = event.data;
         String status = dados["status"];
 
@@ -147,10 +136,30 @@ class _CorridaState extends State<Corrida> {
     _alterarBotaoPrincipal("Aceitar corrida", Color(0xff1ebbd8), (){
       _aceitarCorrida();
     });
+
+    double motoristaLat = _dadosRequisicao ["motorista"]["latitude"];
+    double motoristaLon = _dadosRequisicao ["motorista"]["longitude"];
+    Position position = Position(
+      latitude: motoristaLat,
+      longitude: motoristaLon,
+    );
+    _exibirMarcador(position,"imagens/motorista.png", "Motorista");
+    CameraPosition cameraPosition = CameraPosition(
+        target: LatLng(position.latitude, position.longitude),
+        zoom: 19
+    );
+    _movimentarCamera(cameraPosition);
   }
 
   _statusACaminho(){
-    _alterarBotaoPrincipal("A caminho do passageiro", Colors.grey, null);
+    _mensagemStatus = "A caminho do passageiro";
+    _alterarBotaoPrincipal(
+        "Iniciar corrida",
+        Color(0xff1ebbd8),
+        (){
+          _iniciarCorrida();
+        }
+    );
     double latitudePassageiro = _dadosRequisicao["passageiro"]["latitude"];
     double longitudePassageiro = _dadosRequisicao["passageiro"]["longitude"];
     double latitudeMotorista = _dadosRequisicao["motorista"]["latitude"];
@@ -185,6 +194,10 @@ class _CorridaState extends State<Corrida> {
             northeast: LatLng(nLat, nLon)
         )
         );
+  }
+
+  _iniciarCorrida(){
+
   }
 
   _movimentarCameraBounds(LatLngBounds latLngBounds) async{
@@ -238,8 +251,8 @@ class _CorridaState extends State<Corrida> {
 
   _aceitarCorrida() async{
     Usuario motorista = await UsuarioFirebase.getDadosUsuarioLogado();
-    motorista.latitude = _localMotorista.latitude;
-    motorista.longitude = _localMotorista.longitude;
+    motorista.latitude = _dadosRequisicao["motorista"] ["latitude"];
+    motorista.longitude = _dadosRequisicao["motorista"] ["longitude"];
 
     Firestore db = Firestore.instance;
     String idRequisicao = _dadosRequisicao["id"];
@@ -274,17 +287,18 @@ class _CorridaState extends State<Corrida> {
   @override
   void initState() {
     super.initState();
+    // adicionar listener para mudanças de requisição
+    _adicionarListenerRequisicao();
     _recuperarUltimaLocalizacaoConhecida();
     _adicionarListenerLocalizacao();
 
-    //Recuperar requisição e adicionar listener de status
-    _recuperarRequisicao();
+    //_recuperarRequisicao();
   }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Painel motorista"),
+        title: Text("Painel corrida - ${_mensagemStatus}"),
       ),
       body: Container(
           child: Stack(
