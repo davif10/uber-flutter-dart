@@ -56,7 +56,7 @@ class _CorridaState extends State<Corrida> {
           target: LatLng(position.latitude, position.longitude),
           zoom: 19
       );
-      _movimentarCamera(_posicaoCamera);
+      //_movimentarCamera(_posicaoCamera);
 
       setState(() {
         _localMotorista = position;
@@ -75,7 +75,7 @@ class _CorridaState extends State<Corrida> {
             target: LatLng(position.latitude, position.longitude),
             zoom: 19
         );
-        _movimentarCamera(_posicaoCamera);
+        //_movimentarCamera(_posicaoCamera);
         _localMotorista = position;
       }
     });
@@ -155,9 +155,46 @@ class _CorridaState extends State<Corrida> {
     double longitudePassageiro = _dadosRequisicao["passageiro"]["longitude"];
     double latitudeMotorista = _dadosRequisicao["motorista"]["latitude"];
     double longitudeMotorista = _dadosRequisicao["motorista"]["longitude"];
+
+    //Exibir dois marcadores
     _exibirDoisMarcadores(
       LatLng(latitudeMotorista, longitudeMotorista),
       LatLng(latitudePassageiro, longitudePassageiro));
+
+    //southwest <= northeast
+    var nLat, nLon, sLat, sLon;
+
+    if(latitudeMotorista <= latitudePassageiro){
+        sLat = latitudeMotorista;
+        nLat = latitudePassageiro;
+    }else{
+      sLat = latitudePassageiro;
+      nLat = latitudeMotorista;
+    }
+
+    if(longitudeMotorista <= longitudePassageiro){
+      sLon = longitudeMotorista;
+      nLon = longitudePassageiro;
+    }else{
+      sLon = longitudePassageiro;
+      nLon = longitudeMotorista;
+    }
+    _movimentarCameraBounds(
+        LatLngBounds(
+            southwest: LatLng(sLat, sLon),
+            northeast: LatLng(nLat, nLon)
+        )
+        );
+  }
+
+  _movimentarCameraBounds(LatLngBounds latLngBounds) async{
+    GoogleMapController googleMapController = await _controller.future;
+    googleMapController.animateCamera(
+        CameraUpdate.newLatLngBounds(
+            latLngBounds,
+            100
+        )
+    );
   }
 
   _exibirDoisMarcadores(LatLng latLng1, LatLng latLng2){
@@ -196,7 +233,6 @@ class _CorridaState extends State<Corrida> {
     
     setState(() {
       _marcadores = _listaMarcadores;
-      _movimentarCamera(CameraPosition(target: LatLng(latLng1.latitude, latLng2.longitude), zoom: 18));
     });
   }
 
@@ -233,6 +269,7 @@ class _CorridaState extends State<Corrida> {
 
     });
   }
+
 
   @override
   void initState() {
