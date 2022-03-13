@@ -22,7 +22,10 @@ class _CorridaState extends State<Corrida> {
   Completer<GoogleMapController> _controller = Completer();
   Set<Marker> _marcadores ={};
   Map<String, dynamic> _dadosRequisicao;
-  String _mensagemStatus;
+  String _mensagemStatus = "";
+  String _idRequisicao;
+  Position _localMotorista;
+  String _statusRequisicao = StatusRequisicao.AGUARDANDO;
 
   CameraPosition _posicaoCamera = CameraPosition(
     target: LatLng(-23.563999, -46.653256),
@@ -53,7 +56,17 @@ class _CorridaState extends State<Corrida> {
     geolocator.getPositionStream(locationOptions).listen((position) {
 
       if(position != null){
+        if(_idRequisicao != null && _idRequisicao.isNotEmpty){
+          if(_statusRequisicao != StatusRequisicao.AGUARDANDO){
+            //Atualiza local do motorista
+            UsuarioFirebase.atualizarDadosLocalizacao(_idRequisicao, position.latitude, position.longitude);
+          }
 
+        }else if(position != null){
+          setState(() {
+            _localMotorista = position;
+          });
+        }
       }
 
     });
@@ -107,16 +120,16 @@ class _CorridaState extends State<Corrida> {
 
   _adicionarListenerRequisicao() async{
     Firestore db = Firestore.instance;
-    String idRequisicao = _dadosRequisicao["id"];
     await db.collection("requisicoes")
-    .document(idRequisicao).snapshots().listen((event) {
+    .document(_idRequisicao).snapshots().listen((event) {
+
       if(event.data != null){
         _dadosRequisicao = event.data;
 
         Map<String, dynamic> dados = event.data;
-        String status = dados["status"];
+        _statusRequisicao = dados["status"];
 
-        switch(status){
+        switch(_statusRequisicao){
           case StatusRequisicao.AGUARDANDO:
             _statusAguardando();
             break;
@@ -137,8 +150,8 @@ class _CorridaState extends State<Corrida> {
       _aceitarCorrida();
     });
 
-    double motoristaLat = _dadosRequisicao ["motorista"]["latitude"];
-    double motoristaLon = _dadosRequisicao ["motorista"]["longitude"];
+    double motoristaLat = _localMotorista.latitude;
+    double motoristaLon = _localMotorista.longitude;
     Position position = Position(
       latitude: motoristaLat,
       longitude: motoristaLon,
@@ -287,9 +300,10 @@ class _CorridaState extends State<Corrida> {
   @override
   void initState() {
     super.initState();
+    _idRequisicao = widget.idRequisicao;
     // adicionar listener para mudanças de requisição
     _adicionarListenerRequisicao();
-    _recuperarUltimaLocalizacaoConhecida();
+    //_recuperarUltimaLocalizacaoConhecida();
     _adicionarListenerLocalizacao();
 
     //_recuperarRequisicao();
