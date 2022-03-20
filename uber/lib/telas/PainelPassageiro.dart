@@ -15,26 +15,24 @@ import 'package:uber/util/StatusRequisicao.dart';
 import 'package:uber/util/UsuarioFirebase.dart';
 
 class PainelPassageiro extends StatefulWidget {
-
   @override
   _PainelPassageiroState createState() => _PainelPassageiroState();
 }
 
 class _PainelPassageiroState extends State<PainelPassageiro> {
-  TextEditingController _controllerDestino = TextEditingController(text:"Av Paulista, 342");
+  TextEditingController _controllerDestino =
+      TextEditingController(text: "Av Paulista, 342");
   Position _localPassageiro;
   Map<String, dynamic> _dadosRequisicao;
-  List<String> itensMenu = [
-    "Configurações", "Deslogar"
-  ];
+  List<String> itensMenu = ["Configurações", "Deslogar"];
   Completer<GoogleMapController> _controller = Completer();
+  StreamSubscription<DocumentSnapshot> _streamSubscriptionRequisicoes;
 
   CameraPosition _posicaoCamera = CameraPosition(
-      target: LatLng(-23.563999, -46.653256),
-
+    target: LatLng(-23.563999, -46.653256),
   );
 
-  Set<Marker> _marcadores ={};
+  Set<Marker> _marcadores = {};
 
   bool _exibirCaixaEnderecoDestino = true;
   String _textoBotao = "Chamar uber";
@@ -42,8 +40,8 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
   Function _funcaoBotao;
   String _idRequisicao;
 
-  _escolhaMenuItem(String escolha){
-    switch(escolha){
+  _escolhaMenuItem(String escolha) {
+    switch (escolha) {
       case "Deslogar":
         _deslogarUsuario();
         break;
@@ -52,80 +50,73 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
     }
   }
 
-  _deslogarUsuario() async{
-    FirebaseAuth auth =  FirebaseAuth.instance;
+  _deslogarUsuario() async {
+    FirebaseAuth auth = FirebaseAuth.instance;
     auth.signOut();
     Navigator.pushReplacementNamed(context, "/");
   }
 
-  _onMapCreated(GoogleMapController controller){
+  _onMapCreated(GoogleMapController controller) {
     _controller.complete(controller);
   }
 
-  _adicionarListenerLocalizacao(){
+  _adicionarListenerLocalizacao() {
     var geolocator = Geolocator();
-    var locationOptions = LocationOptions(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 10
-    );
+    var locationOptions =
+        LocationOptions(accuracy: LocationAccuracy.high, distanceFilter: 10);
     geolocator.getPositionStream(locationOptions).listen((position) {
-      if(_idRequisicao != null && _idRequisicao.isNotEmpty){
+      if (_idRequisicao != null && _idRequisicao.isNotEmpty) {
         //Atualiza local do passageiro
-        UsuarioFirebase.atualizarDadosLocalizacao(_idRequisicao, position.latitude, position.longitude);
-
-      }else if(position != null){
+        UsuarioFirebase.atualizarDadosLocalizacao(
+            _idRequisicao, position.latitude, position.longitude);
+      } else {
         setState(() {
           _localPassageiro = position;
         });
+        _statusUberNaoChamado();
       }
-
     });
   }
 
-  _recuperarUltimaLocalizacaoConhecida() async{
+  _recuperarUltimaLocalizacaoConhecida() async {
     Position position = await Geolocator()
         .getLastKnownPosition(desiredAccuracy: LocationAccuracy.high);
 
     setState(() {
-      if(position != null){
-
-      }
+      if (position != null) {}
     });
   }
 
-  _movimentarCamera(CameraPosition cameraPosition) async{
+  _movimentarCamera(CameraPosition cameraPosition) async {
     GoogleMapController googleMapController = await _controller.future;
-    googleMapController.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+    googleMapController
+        .animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
   }
-  
-  _exibirMarcadorPassageiro( Position local) async{
+
+  _exibirMarcadorPassageiro(Position local) async {
     double pixelRatio = MediaQuery.of(context).devicePixelRatio;
     BitmapDescriptor.fromAssetImage(
-        ImageConfiguration(devicePixelRatio: pixelRatio),
-        "imagens/passageiro.png").then((icone){
-
+            ImageConfiguration(devicePixelRatio: pixelRatio),
+            "imagens/passageiro.png")
+        .then((icone) {
       Marker marcadorPassageiro = Marker(
           markerId: MarkerId("marcador-passageiro"),
           position: LatLng(local.latitude, local.longitude),
-          infoWindow: InfoWindow(
-              title: "Meu local"
-          ),
-          icon: icone
-      );
-      
+          infoWindow: InfoWindow(title: "Meu local"),
+          icon: icone);
+
       setState(() {
         _marcadores.add(marcadorPassageiro);
       });
     });
-
   }
 
-  _chamarUber() async{
+  _chamarUber() async {
     String enderecoDestino = _controllerDestino.text;
-    if(enderecoDestino.isNotEmpty){
-      List<Placemark> listaEnderecos = await Geolocator()
-          .placemarkFromAddress(enderecoDestino);
-      if(listaEnderecos != null && listaEnderecos.length > 0){
+    if (enderecoDestino.isNotEmpty) {
+      List<Placemark> listaEnderecos =
+          await Geolocator().placemarkFromAddress(enderecoDestino);
+      if (listaEnderecos != null && listaEnderecos.length > 0) {
         Placemark endereco = listaEnderecos[0];
         Destino destino = Destino();
         destino.cidade = endereco.administrativeArea;
@@ -137,28 +128,34 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
         destino.longitude = endereco.position.longitude;
 
         String enderecoConfirmacao;
-        enderecoConfirmacao = "\n Cidade: "+ destino.cidade;
-        enderecoConfirmacao+= "\n Rua: "+ destino.rua + ", "+destino.numero;
-        enderecoConfirmacao+= "\n Bairro: "+ destino.bairro;
-        enderecoConfirmacao+= "\n Cep: "+ destino.cep;
-        
+        enderecoConfirmacao = "\n Cidade: " + destino.cidade;
+        enderecoConfirmacao += "\n Rua: " + destino.rua + ", " + destino.numero;
+        enderecoConfirmacao += "\n Bairro: " + destino.bairro;
+        enderecoConfirmacao += "\n Cep: " + destino.cep;
+
         showDialog(
             context: context,
-            builder: (context){
+            builder: (context) {
               return AlertDialog(
                 title: Text("Confirmação do endereço"),
-                content:  Text(enderecoConfirmacao),
+                content: Text(enderecoConfirmacao),
                 contentPadding: EdgeInsets.all(16),
                 actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text("Cancelar", style: TextStyle(color: Colors.red),)),
-                    TextButton(
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        "Cancelar",
+                        style: TextStyle(color: Colors.red),
+                      )),
+                  TextButton(
                       onPressed: () {
                         _salvarRequisicao(destino);
                         Navigator.pop(context);
                       },
-                      child: Text("Confirmar", style: TextStyle(color: Colors.red),)),
+                      child: Text(
+                        "Confirmar",
+                        style: TextStyle(color: Colors.red),
+                      )),
                 ],
               );
             });
@@ -166,7 +163,7 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
     }
   }
 
-  _salvarRequisicao(Destino destino ) async{
+  _salvarRequisicao(Destino destino) async {
     Usuario passageiro = await UsuarioFirebase.getDadosUsuarioLogado();
     passageiro.latitude = _localPassageiro.latitude;
     passageiro.longitude = _localPassageiro.longitude;
@@ -176,25 +173,30 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
     requisicao.status = StatusRequisicao.AGUARDANDO;
 
     Firestore db = Firestore.instance;
-    db.collection("requisicoes")
-    .document(requisicao.id)
-    .setData(requisicao.toMap());
+    db
+        .collection("requisicoes")
+        .document(requisicao.id)
+        .setData(requisicao.toMap());
 
     //Salvar requisição ativa
-    Map<String,dynamic> dadosRequisicaoAtiva = {};
+    Map<String, dynamic> dadosRequisicaoAtiva = {};
     dadosRequisicaoAtiva["id_requisicao"] = requisicao.id;
     dadosRequisicaoAtiva["id_usuario"] = passageiro.idUsuario;
     dadosRequisicaoAtiva["status"] = StatusRequisicao.AGUARDANDO;
 
-    db.collection("requisicao_ativa")
-    .document(passageiro.idUsuario)
-    .setData(dadosRequisicaoAtiva);
+    db
+        .collection("requisicao_ativa")
+        .document(passageiro.idUsuario)
+        .setData(dadosRequisicaoAtiva);
 
-    //Chama método para alterar interface para o status aguardando
-    _statusAguardando();
+    //Adicionar listener para as requisições
+    if(_streamSubscriptionRequisicoes == null){
+      _adicionarListenerRequisicao(requisicao.id);
+    }
+
   }
 
-  _alterarBotaoPrincipal(String texto, Color cor, Function funcao){
+  _alterarBotaoPrincipal(String texto, Color cor, Function funcao) {
     setState(() {
       _textoBotao = texto;
       _corBotao = cor;
@@ -202,87 +204,152 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
     });
   }
 
-  _statusUberNaoChamado(){
+  _statusUberNaoChamado() {
     _exibirCaixaEnderecoDestino = true;
-    _alterarBotaoPrincipal("Chamar uber", Color(0xff1ebbd8), () => _chamarUber());
-    Position position = Position(
-      latitude: _localPassageiro.latitude,
-      longitude: _localPassageiro.longitude
-    );
-    _exibirMarcadorPassageiro(position);
-    CameraPosition cameraPosition = CameraPosition(
-        target: LatLng(position.latitude, position.longitude),
-        zoom: 19
-    );
-    _movimentarCamera(cameraPosition);
+    _alterarBotaoPrincipal(
+        "Chamar uber", Color(0xff1ebbd8), () => _chamarUber());
+
+    if(_localPassageiro != null){
+      Position position = Position(
+          latitude: _localPassageiro.latitude,
+          longitude: _localPassageiro.longitude);
+      _exibirMarcadorPassageiro(position);
+      CameraPosition cameraPosition = CameraPosition(
+          target: LatLng(position.latitude, position.longitude), zoom: 19);
+      _movimentarCamera(cameraPosition);
+    }
+
   }
 
-  _statusAguardando(){
+  _statusAguardando() {
     _exibirCaixaEnderecoDestino = false;
     _alterarBotaoPrincipal("Cancelar", Colors.red, () => _cancelarUber());
 
-    double passageiroLat =_dadosRequisicao["passageiro"]["latitude"];
-    double passageiroLon =_dadosRequisicao["passageiro"]["longitude"];
-    Position position = Position(
-        latitude: passageiroLat,
-        longitude: passageiroLon
-    );
+    double passageiroLat = _dadosRequisicao["passageiro"]["latitude"];
+    double passageiroLon = _dadosRequisicao["passageiro"]["longitude"];
+    Position position =
+        Position(latitude: passageiroLat, longitude: passageiroLon);
     _exibirMarcadorPassageiro(position);
     CameraPosition cameraPosition = CameraPosition(
-        target: LatLng(position.latitude, position.longitude),
-        zoom: 19
-    );
+        target: LatLng(position.latitude, position.longitude), zoom: 19);
     _movimentarCamera(cameraPosition);
   }
 
-  _statusACaminho(){
-    _alterarBotaoPrincipal("Motorista a caminho", Colors.grey, (){
+  _statusACaminho() {
+    _alterarBotaoPrincipal("Motorista a caminho", Colors.grey, () {});
 
+    double latitudePassageiro = _dadosRequisicao["passageiro"]["latitude"];
+    double longitudePassageiro = _dadosRequisicao["passageiro"]["longitude"];
+    double latitudeMotorista = _dadosRequisicao["motorista"]["latitude"];
+    double longitudeMotorista = _dadosRequisicao["motorista"]["longitude"];
+
+    //Exibir dois marcadores
+    _exibirDoisMarcadores(LatLng(latitudeMotorista, longitudeMotorista),
+        LatLng(latitudePassageiro, longitudePassageiro));
+
+    //southwest <= northeast
+    var nLat, nLon, sLat, sLon;
+
+    if (latitudeMotorista <= latitudePassageiro) {
+      sLat = latitudeMotorista;
+      nLat = latitudePassageiro;
+    } else {
+      sLat = latitudePassageiro;
+      nLat = latitudeMotorista;
+    }
+
+    if (longitudeMotorista <= longitudePassageiro) {
+      sLon = longitudeMotorista;
+      nLon = longitudePassageiro;
+    } else {
+      sLon = longitudePassageiro;
+      nLon = longitudeMotorista;
+    }
+    _movimentarCameraBounds(LatLngBounds(
+        southwest: LatLng(sLat, sLon), northeast: LatLng(nLat, nLon)));
+  }
+
+  _exibirDoisMarcadores(LatLng latLng1, LatLng latLng2) {
+    double pixelRatio = MediaQuery.of(context).devicePixelRatio;
+    Set<Marker> _listaMarcadores = {};
+
+    BitmapDescriptor.fromAssetImage(
+            ImageConfiguration(devicePixelRatio: pixelRatio),
+            "imagens/motorista.png")
+        .then((icone) {
+      Marker marcadorMotorista = Marker(
+          markerId: MarkerId("marcador-motorista"),
+          position: LatLng(latLng1.latitude, latLng1.longitude),
+          infoWindow: InfoWindow(title: "Local motorista"),
+          icon: icone);
+      _listaMarcadores.add(marcadorMotorista);
+    });
+
+    BitmapDescriptor.fromAssetImage(
+            ImageConfiguration(devicePixelRatio: pixelRatio),
+            "imagens/passageiro.png")
+        .then((icone) {
+      Marker marcadorPassageiro = Marker(
+          markerId: MarkerId("marcador-passageiro"),
+          position: LatLng(latLng2.latitude, latLng2.longitude),
+          infoWindow: InfoWindow(title: "Local passageiro"),
+          icon: icone);
+      _listaMarcadores.add(marcadorPassageiro);
+    });
+
+    setState(() {
+      _marcadores = _listaMarcadores;
     });
   }
 
-  _cancelarUber() async{
-    FirebaseUser firebaseUser = await UsuarioFirebase.getUsuarioAtual();
-    Firestore db = Firestore.instance;
-    db.collection("requisicoes")
-    .document(_idRequisicao).updateData({
-      "status": StatusRequisicao.CANCELADA
-    }).then((_){
-      db.collection("requisicao_ativa")
-          .document(firebaseUser.uid)
-          .delete();
-    });
-
+  _movimentarCameraBounds(LatLngBounds latLngBounds) async {
+    GoogleMapController googleMapController = await _controller.future;
+    googleMapController
+        .animateCamera(CameraUpdate.newLatLngBounds(latLngBounds, 100));
   }
 
-  _recuperaRequisicaoAtiva() async{
+  _cancelarUber() async {
     FirebaseUser firebaseUser = await UsuarioFirebase.getUsuarioAtual();
     Firestore db = Firestore.instance;
-    DocumentSnapshot documentSnapshot = await db.collection("requisicao_ativa")
-    .document(firebaseUser.uid)
-    .get();
+    db
+        .collection("requisicoes")
+        .document(_idRequisicao)
+        .updateData({"status": StatusRequisicao.CANCELADA}).then((_) {
+      db.collection("requisicao_ativa").document(firebaseUser.uid).delete();
+    });
+  }
 
-    if(documentSnapshot.data != null){
+  _recuperaRequisicaoAtiva() async {
+    FirebaseUser firebaseUser = await UsuarioFirebase.getUsuarioAtual();
+    Firestore db = Firestore.instance;
+    DocumentSnapshot documentSnapshot = await db
+        .collection("requisicao_ativa")
+        .document(firebaseUser.uid)
+        .get();
+
+    if (documentSnapshot.data != null) {
       Map<String, dynamic> dados = documentSnapshot.data;
       _idRequisicao = dados["id_requisicao"];
       _adicionarListenerRequisicao(_idRequisicao);
-    }else{
+    } else {
       _statusUberNaoChamado();
     }
   }
 
-  _adicionarListenerRequisicao(String idRequisicao) async{
+  _adicionarListenerRequisicao(String idRequisicao) async {
     Firestore db = Firestore.instance;
-    await db.collection("requisicoes")
-        .document(idRequisicao).snapshots().listen((snapshot) {
-
-      if(snapshot.data != null){
+    _streamSubscriptionRequisicoes = await db
+        .collection("requisicoes")
+        .document(idRequisicao)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.data != null) {
         Map<String, dynamic> dados = snapshot.data;
         _dadosRequisicao = dados;
         String status = dados["status"];
         _idRequisicao = dados["id_requisicao"];
 
-        switch(status){
+        switch (status) {
           case StatusRequisicao.AGUARDANDO:
             _statusAguardando();
             break;
@@ -313,125 +380,129 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
         title: Text("Painel passageiro"),
         actions: [
           PopupMenuButton(
-              itemBuilder: (context){
-
-                return itensMenu.map((String item){
-                  return PopupMenuItem(
-                    value: item,
-                    child: Text(item),
-                  );
-                }).toList();
-              },
-              onSelected: _escolhaMenuItem,
+            itemBuilder: (context) {
+              return itensMenu.map((String item) {
+                return PopupMenuItem(
+                  value: item,
+                  child: Text(item),
+                );
+              }).toList();
+            },
+            onSelected: _escolhaMenuItem,
           )
         ],
       ),
       body: Container(
-        child: Stack(
-          children: [
-            GoogleMap(
-              mapType: MapType.normal,
-              initialCameraPosition: _posicaoCamera,
-              onMapCreated: _onMapCreated,
-              //myLocationEnabled: true,
-              myLocationButtonEnabled: false,
-              markers: _marcadores,
-            ),
-            Visibility(
-                visible: _exibirCaixaEnderecoDestino,
-                child: Stack(
-                  children: [
-                    Positioned(
+          child: Stack(
+        children: [
+          GoogleMap(
+            mapType: MapType.normal,
+            initialCameraPosition: _posicaoCamera,
+            onMapCreated: _onMapCreated,
+            //myLocationEnabled: true,
+            myLocationButtonEnabled: false,
+            markers: _marcadores,
+          ),
+          Visibility(
+              visible: _exibirCaixaEnderecoDestino,
+              child: Stack(
+                children: [
+                  Positioned(
                       top: 0,
                       left: 0,
                       right: 0,
-                        child: Padding(
-                          padding: EdgeInsets.all(10),
-                          child: Container(
-                            height: 50,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey),
-                                borderRadius: BorderRadius.circular(3),
-                                color: Colors.white
-                            ),
-                            child: TextField(
-                              readOnly: true,
-                              decoration: InputDecoration(
-                                  icon: Container(
-                                    margin: EdgeInsets.only(left: 20),
-                                    width: 10,
-                                    height: 10,
-                                    child: Icon(Icons.location_on, color: Colors.green,),
+                      child: Padding(
+                        padding: EdgeInsets.all(10),
+                        child: Container(
+                          height: 50,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(3),
+                              color: Colors.white),
+                          child: TextField(
+                            readOnly: true,
+                            decoration: InputDecoration(
+                                icon: Container(
+                                  margin: EdgeInsets.only(left: 20),
+                                  width: 10,
+                                  height: 10,
+                                  child: Icon(
+                                    Icons.location_on,
+                                    color: Colors.green,
                                   ),
-                                  hintText: "Meu local",
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.only(left: 15, top: 16)
-                              ),
-                            ),
+                                ),
+                                hintText: "Meu local",
+                                border: InputBorder.none,
+                                contentPadding:
+                                    EdgeInsets.only(left: 15, top: 16)),
                           ),
-                        )
-                    ),
-                    Positioned(
-                        top: 55,
-                        left: 0,
-                        right: 0,
-                        child: Padding(
-                          padding: EdgeInsets.all(10),
-                          child: Container(
-                            height: 50,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey),
-                                borderRadius: BorderRadius.circular(3),
-                                color: Colors.white
-                            ),
-                            child: TextField(
-                              controller: _controllerDestino,
-                              decoration: InputDecoration(
-                                  icon: Container(
-                                    margin: EdgeInsets.only(left: 20),
-                                    width: 10,
-                                    height: 10,
-                                    child: Icon(Icons.local_taxi, color: Colors.black,),
+                        ),
+                      )),
+                  Positioned(
+                      top: 55,
+                      left: 0,
+                      right: 0,
+                      child: Padding(
+                        padding: EdgeInsets.all(10),
+                        child: Container(
+                          height: 50,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(3),
+                              color: Colors.white),
+                          child: TextField(
+                            controller: _controllerDestino,
+                            decoration: InputDecoration(
+                                icon: Container(
+                                  margin: EdgeInsets.only(left: 20),
+                                  width: 10,
+                                  height: 10,
+                                  child: Icon(
+                                    Icons.local_taxi,
+                                    color: Colors.black,
                                   ),
-                                  hintText: "Digite o destino",
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.only(left: 15, top: 16)
-                              ),
-                            ),
+                                ),
+                                hintText: "Digite o destino",
+                                border: InputBorder.none,
+                                contentPadding:
+                                    EdgeInsets.only(left: 15, top: 16)),
                           ),
-                        )
-                    ),
-                  ],
-                )
-            ),
-            Positioned(
+                        ),
+                      )),
+                ],
+              )),
+          Positioned(
               right: 0,
-                left: 0,
-                bottom: 0,
-                child: Padding(
-                  padding: Platform.isIOS
-                  ? EdgeInsets.fromLTRB(20, 10, 20, 25)
-                  : EdgeInsets.all(10),
-                  child: ElevatedButton(
-                    onPressed: _funcaoBotao,
-                    child: Text(
-                      _textoBotao,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                      ),
+              left: 0,
+              bottom: 0,
+              child: Padding(
+                padding: Platform.isIOS
+                    ? EdgeInsets.fromLTRB(20, 10, 20, 25)
+                    : EdgeInsets.all(10),
+                child: ElevatedButton(
+                  onPressed: _funcaoBotao,
+                  child: Text(
+                    _textoBotao,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
                     ),
-                    style: ElevatedButton.styleFrom(
-                        primary: _corBotao,
-                        padding: EdgeInsets.fromLTRB(32, 16, 32, 16)),
                   ),
-                )
-            )
-          ],
-        )
-      ),
+                  style: ElevatedButton.styleFrom(
+                      primary: _corBotao,
+                      padding: EdgeInsets.fromLTRB(32, 16, 32, 16)),
+                ),
+              ))
+        ],
+      )),
     );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _streamSubscriptionRequisicoes.cancel();
   }
 }
