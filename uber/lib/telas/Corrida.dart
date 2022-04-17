@@ -57,7 +57,7 @@ class _CorridaState extends State<Corrida> {
           if (_statusRequisicao != StatusRequisicao.AGUARDANDO) {
             //Atualiza local do motorista
             UsuarioFirebase.atualizarDadosLocalizacao(
-                _idRequisicao, position.latitude, position.longitude);
+                _idRequisicao, position.latitude, position.longitude, "motorista");
           } else {
             setState(() {
               _localMotorista = position;

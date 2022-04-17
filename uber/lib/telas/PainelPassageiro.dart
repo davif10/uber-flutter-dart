@@ -70,7 +70,7 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
       if (_idRequisicao != null && _idRequisicao.isNotEmpty) {
         //Atualiza local do passageiro
         UsuarioFirebase.atualizarDadosLocalizacao(
-            _idRequisicao, position.latitude, position.longitude);
+            _idRequisicao, position.latitude, position.longitude, "passageiro");
       } else {
         setState(() {
           _localPassageiro = position;
@@ -316,12 +316,24 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
   }
 
   _statusConfirmada(){
-    if(_streamSubscriptionRequisicoes != null)
+    if(_streamSubscriptionRequisicoes != null){
       _streamSubscriptionRequisicoes.cancel();
+      _streamSubscriptionRequisicoes = null;
+    }
 
     _exibirCaixaEnderecoDestino = true;
     _alterarBotaoPrincipal(
         "Chamar uber", Color(0xff1ebbd8), () => _chamarUber());
+
+    //Exibe o local do passageiro
+    double passageiroLat = _dadosRequisicao["passageiro"]["latitude"];
+    double passageiroLon = _dadosRequisicao["passageiro"]["longitude"];
+    Position position =
+    Position(latitude: passageiroLat, longitude: passageiroLon);
+    _exibirMarcadorPassageiro(position);
+    CameraPosition cameraPosition = CameraPosition(
+        target: LatLng(position.latitude, position.longitude), zoom: 19);
+    _movimentarCamera(cameraPosition);
 
     _dadosRequisicao = {};
   }
@@ -424,6 +436,12 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
         .updateData({"status": StatusRequisicao.CANCELADA}).then((_) {
       db.collection("requisicao_ativa").document(firebaseUser.uid).delete();
     });
+
+    _statusUberNaoChamado();
+    if(_streamSubscriptionRequisicoes != null){
+      _streamSubscriptionRequisicoes.cancel();
+      _streamSubscriptionRequisicoes = null;
+    }
   }
 
   _recuperaRequisicaoAtiva() async {
@@ -454,7 +472,7 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
         Map<String, dynamic> dados = snapshot.data;
         _dadosRequisicao = dados;
         String status = dados["status"];
-        _idRequisicao = dados["id_requisicao"];
+        _idRequisicao = dados["id"];
 
         switch (status) {
           case StatusRequisicao.AGUARDANDO:
@@ -616,5 +634,6 @@ class _PainelPassageiroState extends State<PainelPassageiro> {
   void dispose() {
     super.dispose();
     _streamSubscriptionRequisicoes.cancel();
+    _streamSubscriptionRequisicoes = null;
   }
 }
