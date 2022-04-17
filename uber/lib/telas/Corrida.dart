@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:uber/model/Usuario.dart';
 import 'package:uber/util/StatusRequisicao.dart';
 import 'package:uber/util/UsuarioFirebase.dart';
@@ -132,6 +133,7 @@ class _CorridaState extends State<Corrida> {
             _statusEmViagem();
             break;
           case StatusRequisicao.FINALIZADA:
+            _statusFinalizada();
             break;
         }
       }
@@ -143,7 +145,7 @@ class _CorridaState extends State<Corrida> {
       _aceitarCorrida();
     });
 
-    if(_localMotorista != null){
+    if (_localMotorista != null) {
       double motoristaLat = _localMotorista.latitude;
       double motoristaLon = _localMotorista.longitude;
       Position position = Position(
@@ -155,7 +157,6 @@ class _CorridaState extends State<Corrida> {
           target: LatLng(position.latitude, position.longitude), zoom: 19);
       _movimentarCamera(cameraPosition);
     }
-
   }
 
   _statusACaminho() {
@@ -230,8 +231,55 @@ class _CorridaState extends State<Corrida> {
         southwest: LatLng(sLat, sLon), northeast: LatLng(nLat, nLon)));
   }
 
-  _finalizarCorrida(){
+  _statusFinalizada() async{
+    //Calcula valor da corrida
+    double latitudeDestino = _dadosRequisicao["destino"]["latitude"];
+    double longitudeDestino = _dadosRequisicao["destino"]["longitude"];
+    double latitudeOrigem = _dadosRequisicao["origem"]["latitude"];
+    double longitudeOrigem = _dadosRequisicao["origem"]["longitude"];
 
+    double distanciaEmMetros = await Geolocator().distanceBetween(
+        latitudeOrigem,
+        longitudeOrigem,
+        latitudeDestino,
+        longitudeDestino);
+
+    double distanciaKm = distanciaEmMetros / 1000;
+
+    //Valor cobrado por KM  R$ 8
+    double valorViagem = distanciaKm * 8;
+    var formatar = NumberFormat("#,##0.00", "pt_BR");
+    var valorViagemFormatado = formatar.format(valorViagem);
+
+
+    _mensagemStatus = "Viagem finalizada";
+    _alterarBotaoPrincipal("Confirmar - R\$ $valorViagemFormatado", Color(0xff1ebbd8), () {
+      _confirmarCorrida();
+    });
+  }
+
+  _confirmarCorrida(){
+
+  }
+
+  _finalizarCorrida() {
+    Firestore db = Firestore.instance;
+    db
+        .collection("requisicoes")
+        .document(_idRequisicao)
+        .updateData({"status": StatusRequisicao.FINALIZADA});
+
+    String idPassageiro = _dadosRequisicao["passageiro"]["idUsuario"];
+    db
+        .collection("requisicao_ativa")
+        .document(idPassageiro)
+        .updateData({"status": StatusRequisicao.FINALIZADA});
+
+    String idMotorista = _dadosRequisicao["motorista"]["idUsuario"];
+    db
+        .collection("requisicao_ativa_motorista")
+        .document(idMotorista)
+        .updateData({"status": StatusRequisicao.FINALIZADA});
   }
 
   _iniciarCorrida() {
